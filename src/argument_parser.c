@@ -1,21 +1,8 @@
 #include <stdlib.h>
+#include <stdio.h>
 
 #include "argument_parser.h"
 #include "types.h"
-
-/**
- * @brief Type for checking if number of provided
- *        paremeters is correct
- * 
- */
-typedef bool bCheckStatus_t;
-
-/**
- * @brief States of check
- * 
- */
-#define CHECK_FAILED ((uint8_t) 0u)
-#define CHECK_PASSED ((uint8_t) 1u)
 
 /**
  * @brief States of parse
@@ -127,38 +114,17 @@ bParseStatus_t bParseArgs(const uint8_t u8FlagsCount, char** cFlags, stRequest_T
         }
         else
         {
-            /* print help here */
-            fprintf(stderr, "Provided wrong number of params for this operation\n");
+            fprintf(stderr, "Provided wrong number of params for this operation\n\n");
+            vShowHelp();
         }
     }
     else
     {
-        /* print help here */
-        fprintf(stderr, "Wrong number of params\n");
+        fprintf(stderr, "Provided wrong number of params for this operation\n\n");
+        vShowHelp();
     }
 
     return bParseStatus;
-}
-
-/* TMP FUNC*/
-void printRequest(stRequest_T* stRequest)
-{
-    printf("Request operation num: %d\n", stRequest->eOperation);
-
-    if(NULL != stRequest->cSite)
-    {
-        printf("Request site: %s\n", stRequest->cSite);
-    }
-    
-    if(NULL != stRequest->cLogin)
-    {
-        printf("Request login: %s\n", stRequest->cLogin);
-    }
-
-    if(NULL != stRequest->cPw)
-    {
-        printf("Request pw: %s\n", stRequest->cPw);
-    }
 }
 
 /**
@@ -209,7 +175,7 @@ static eOperation_T eGetOperation(const char cOperation)
  * @brief Check if provided requested amount of paramaters for operation
  * 
  * @param eOperation -> requested operation
- * @param uiFlagsCount -> number of passed parameters
+ * @param u8FlagsCount -> number of passed parameters
  * @return true -> number of parameters is correct
  * @return false -> number of parameters is not correct
  */
@@ -254,7 +220,7 @@ static bCheckStatus_t bCheckIfProvidedReqParamsCount(const eOperation_T eOperati
 /**
  * @brief Set the values in request for wanted operation
  * 
- * @param request -> struct that holds necessary data for wanted request.
+ * @param stRequest -> struct that holds necessary data for wanted request.
  *                   At this stage it is ensured that pointer is not NULL,
  *                   no need to do any additional checks
  * @param cFlags -> array of input parameters
@@ -297,7 +263,7 @@ static void vSetParamsForOperation(stRequest_T** stRequest, char** cFlags, const
 /**
  * @brief Set the values in request for getting credentials for specific site
  * 
- * @param request -> struct that holds necessary data for wanted request
+ * @param stRequest -> struct that holds necessary data for wanted request
  * @param cFlags -> array of input parameters
  */
 static void vSetParamsForGetCredentialsReq(stRequest_T** stRequest, char** cFlags)
@@ -310,7 +276,7 @@ static void vSetParamsForGetCredentialsReq(stRequest_T** stRequest, char** cFlag
 /**
  * @brief Set the values in request for getting login for specific site
  * 
- * @param request -> struct that holds necessary data for wanted request
+ * @param stRequest -> struct that holds necessary data for wanted request
  * @param cFlags -> array of input parameters
  */
 static void vSetParamsForGetLoginReq(stRequest_T** stRequest, char** cFlags)
@@ -323,7 +289,7 @@ static void vSetParamsForGetLoginReq(stRequest_T** stRequest, char** cFlags)
 /**
  * @brief Set the values in request for getting password for specific site
  * 
- * @param request -> struct that holds necessary data for wanted request
+ * @param stRequest -> struct that holds necessary data for wanted request
  * @param cFlags -> array of input parameters
  */
 static void vSetParamsForGetPwReq(stRequest_T** stRequest, char** cFlags)
@@ -336,7 +302,7 @@ static void vSetParamsForGetPwReq(stRequest_T** stRequest, char** cFlags)
 /**
  * @brief Set the values in request for getting the number of saved credentials
  * 
- * @param request -> struct that holds necessary data for wanted request
+ * @param stRequest -> struct that holds necessary data for wanted request
  * @param cFlags -> array of input parameters
  */
 static void vSetParamsForGetCredentialsCountReq(stRequest_T** stRequest)
@@ -349,7 +315,7 @@ static void vSetParamsForGetCredentialsCountReq(stRequest_T** stRequest)
 /**
  * @brief Set the values in request for getting all credentials
  * 
- * @param request -> struct that holds necessary data for wanted request
+ * @param stRequest -> struct that holds necessary data for wanted request
  * @param cFlags -> array of input parameters
  */
 static void vSetParamsForGetAllCredentialsReq(stRequest_T** stRequest)
@@ -362,7 +328,7 @@ static void vSetParamsForGetAllCredentialsReq(stRequest_T** stRequest)
 /**
  * @brief Set the values in request for adding new credentials operation
  * 
- * @param request -> struct that holds necessary data for wanted request
+ * @param stRequest -> struct that holds necessary data for wanted request
  * @param cFlags -> array of input parameters
  */
 static void vSetParamsForAddCredentialsReq(stRequest_T** stRequest, char** cFlags)
@@ -405,7 +371,23 @@ static char* cGetPwParamVal(char** cFlags)
     return cFlags[PW_PARAM_INDEX];
 }
 
+/**
+ * @brief Shows info, how to use the app
+ * 
+ */
 static void vShowHelp()
 {
-    fprintf(stderr, "");
+    fprintf(stderr, 
+        "\nusage: manager [-c <site name>] [-l <site name>] \n"
+        "               [-p <site name>] [-s] [-a] \n"
+        "               [-n <site name> <login> <password>]\n"
+        "\n"
+        "where:\n"
+        "    -c -> get saved credentials for site \n"
+        "    -l -> get saved login for site \n"
+        "    -p -> get saved password for site \n"
+        "    -s -> get number of saved credentials \n"
+        "    -a -> get all saved credentials \n"
+        "    -n -> add new credentials \n\n"
+    );
 }

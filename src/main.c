@@ -14,7 +14,6 @@ int main(int argc, char **argv) {
 
     if(true == parseResult) {
         fprintf(stdout, "Parsing done correctly\n");
-        printRequest(stRequest);
     }
     else
     {
