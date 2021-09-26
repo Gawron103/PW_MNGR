@@ -8,7 +8,6 @@ typedef enum {
     eGET_CREDENTIALS_COUNT,
     eNEW_CREDENTIALS,
     eGET_ALL,
-    eNONE,
     eINVALID
 } eOperation_T;
 

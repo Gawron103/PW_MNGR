@@ -3,15 +3,18 @@
 
 #include <stdbool.h>
 #include <stdio.h>
+#include <stdint.h>
 
 #include "types.h"
 
-bool parseArgs(const size_t uiFlagsCount, char **flags, stRequest_T **request);
+typedef bool bParseStatus_t;
+
+bParseStatus_t bParseArgs(const uint8_t u8FlagsCount, char** cFlags, stRequest_T** stOutRequest);
 
 /* TMP FUNC */
-void printRequest(stRequest_T *stRequest);
+void printRequest(stRequest_T* stRequest);
 // eOperation_T getOperation(const char cOperation);
-// bool validate_input(const size_t uiFlagsCount, char **flags);
+// bool validate_input(const size_t uiFlagsCount, char **cFlags);
 
 #endif /* ARGUMENT_PARSER_H */
 

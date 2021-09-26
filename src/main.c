@@ -1,4 +1,5 @@
 #include <stdio.h>
+#include <stdint.h>
 #include <sqlite3.h>
 
 #include "db_handler.h"
@@ -6,14 +7,14 @@
 #include "types.h"
 
 int main(int argc, char **argv) {
-    stRequest_T *request = NULL;
+    stRequest_T *stRequest = NULL;
     bool parseResult = false;
 
-    parseResult = parseArgs(argc, argv, &request);
+    parseResult = bParseArgs((uint8_t)argc, argv, &stRequest);
 
     if(true == parseResult) {
         fprintf(stdout, "Parsing done correctly\n");
-        printRequest(request);
+        printRequest(stRequest);
     }
     else
     {

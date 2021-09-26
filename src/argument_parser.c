@@ -1,92 +1,147 @@
+#include <stdlib.h>
+
 #include "argument_parser.h"
 #include "types.h"
 
-#include <stdlib.h>
+/**
+ * @brief Type for checking if number of provided
+ *        paremeters is correct
+ * 
+ */
+typedef bool bCheckStatus_t;
 
-#define OPERATION_INDEX 1u
-#define PARAMS_START_INDEX 2u
-#define LOGIN_PARAM_INDEX 3u
-#define PW_PARAM_INDEX 4u
-#define SITE_PARAM_INDEX 2u
+/**
+ * @brief States of check
+ * 
+ */
+#define CHECK_FAILED ((uint8_t) 0u)
+#define CHECK_PASSED ((uint8_t) 1u)
 
-#define MIN_ARGS 2u
-#define MAX_ARGS 5u
+/**
+ * @brief States of parse
+ * 
+ */
+#define PARSE_NOT_OK ((uint8_t) 0u)
+#define PARSE_OK     ((uint8_t) 1u)
 
-/* number of parameters for each operation */
-#define PARAMS_COUNT_FOR_GET_CREDENTIALS 3u
-#define PARAMS_COUNT_FOR_GET_LONG 3u
-#define PARAMS_COUNT_FOR_GET_PW 3u
-#define PARAMS_COUNT_FOR_CREDENTIALS_NUM 2u
-#define PARAMS_COUNT_FOR_NEW_CREDENTIALS 5u
-#define PARAMS_COUNT_FOR_GET_ALL 2u
+/**
+ * @brief Range of needed input parameters
+ * 
+ */
+#define MIN_ARGS ((uint8_t) 2u)
+#define MAX_ARGS ((uint8_t) 5u)
 
+/**
+ * @brief Positions of parameters in input array
+ * 
+ */
+#define OPERATION_INDEX    ((uint8_t) 1u)
+#define PARAMS_START_INDEX ((uint8_t) 2u)
+#define SITE_PARAM_INDEX   ((uint8_t) 2u)
+#define LOGIN_PARAM_INDEX  ((uint8_t) 3u)
+#define PW_PARAM_INDEX     ((uint8_t) 4u)
+
+/**
+ * @brief Flags for possible operations
+ * 
+ */
+#define FLAG_GET_CREDENTIALS       ((char) 'c')
+#define FLAG_GET_LOGIN             ((char) 'l')
+#define FLAG_GET_PW                ((char) 'p')
+#define FLAG_GET_CREDENTIALS_COUNT ((char) 's')
+#define FLAG_ADD_CREDENTIALS       ((char) 'n')
+#define FLAG_GET_ALL_CREDENTIALS   ((char) 'a')
+
+/**
+ * @brief Number of needed parameters for each operation
+ * 
+ */
+#define PARAMS_COUNT_FOR_GET_CREDENTIALS ((uint8_t) 3u)
+#define PARAMS_COUNT_FOR_GET_LONG        ((uint8_t) 3u)
+#define PARAMS_COUNT_FOR_GET_PW          ((uint8_t) 3u)
+#define PARAMS_COUNT_FOR_CREDENTIALS_NUM ((uint8_t) 2u)
+#define PARAMS_COUNT_FOR_NEW_CREDENTIALS ((uint8_t) 5u)
+#define PARAMS_COUNT_FOR_GET_ALL         ((uint8_t) 2u)
+
+/* Prototypes section */
 static eOperation_T eGetOperation(const char cOperation);
-static bool checkIfProvidedReqParamsCount(const eOperation_T eOperation, const size_t uiFlagsCount);
+static bCheckStatus_t bCheckIfProvidedReqParamsCount(const eOperation_T eOperation, const uint8_t u8FlagsCount);
+static void vSetParamsForOperation(stRequest_T** stRequest, char** cFlags, const eOperation_T eOperation);
+static void vSetParamsForGetCredentialsReq(stRequest_T** stRequest, char** cFlags);
+static void vSetParamsForGetLoginReq(stRequest_T** stRequest, char** cFlags);
+static void vSetParamsForGetPwReq(stRequest_T** stRequest, char** cFlags);
+static void vSetParamsForGetCredentialsCountReq(stRequest_T** stRequest);
+static void vSetParamsForGetAllCredentialsReq(stRequest_T** stRequest);
+static void vSetParamsForAddCredentialsReq(stRequest_T** stRequest, char** cFlags);
+static char* cGetSiteParamVal(char** cFlags);
+static char* cGetLoginParamVal(char** cFlags);
+static char* cGetPwParamVal(char** cFlags);
+static void vShowHelp();
 
-static bool assignParamsForOperation(stRequest_T **request, char** flags, const eOperation_T eOperation);
-static bool setParamsForGetCredentialsReq(stRequest_T **request, char **flags);
-static bool setParamsForGetLoginReq(stRequest_T **request, char **flags);
-static bool setParamsForGetPwReq(stRequest_T **request, char **flags);
-static bool setParamsForGetCredentialsCountReq(stRequest_T **request, char **flags);
-static bool setParamsForgetAllCredentialsReq(stRequest_T **request, char **flags);
-static bool setParamsForAddCredentialsReq(stRequest_T **request, char **flags);
-
-static char* getSiteParamVal(char** flags);
-static char* getLoginParamVal(char** flags);
-static char* getPwParamVal(char** flags);
-
-bool parseArgs(const size_t uiFlagsCount, char **flags, stRequest_T **request)
+/**
+ * @brief Parses input from user
+ * 
+ * @param u8FlagsCount -> number of parameters
+ * @param cFlags -> array of input parameters
+ * @param stOutRequest -> output pointer for request
+ * @return bParseStatus_t -> is parsing successful
+ */
+bParseStatus_t bParseArgs(const uint8_t u8FlagsCount, char** cFlags, stRequest_T** stOutRequest)
 {
-    bool retVal = false;
-    bool paramsNumCorrect = false;
-    bool assignResult = false;
-    eOperation_T eOperation = eNONE;
+    bParseStatus_t bParseStatus = PARSE_NOT_OK;
+    bCheckStatus_t bParamsNumCorrect = CHECK_FAILED;
+    eOperation_T eOperation = eINVALID;
     stRequest_T *stRequest = NULL;
 
-    /* first check if numebr of args is between correct amount */
-    if(uiFlagsCount >= MIN_ARGS &&  uiFlagsCount <= MAX_ARGS) {
+    /* check if numebr of args is between correct amount */
+    if(u8FlagsCount >= MIN_ARGS &&  u8FlagsCount <= MAX_ARGS) {
         /* get the requested operation */
-        eOperation =  eGetOperation(*(flags[OPERATION_INDEX] + 1));
+        eOperation =  eGetOperation(*(cFlags[OPERATION_INDEX] + 1u));
 
-        /* check if provided required amount of params */
-        paramsNumCorrect = checkIfProvidedReqParamsCount(eOperation, uiFlagsCount);
+        /* check if number of passed params is correct for requested operation */
+        bParamsNumCorrect = bCheckIfProvidedReqParamsCount(eOperation, u8FlagsCount);
 
-        if(true == paramsNumCorrect)
+        if(CHECK_PASSED == bParamsNumCorrect)
         {
             fprintf(stdout, "Provided correct amount of params\n");
 
             stRequest = (stRequest_T*)malloc(sizeof(stRequest_T));
-            stRequest->eOperation = eOperation;
 
-            assignResult = assignParamsForOperation(&stRequest, flags, eOperation);
-
-            if(true == assignResult)
+            /* check if memory has been allocated */
+            if(NULL != stRequest)
             {
-                fprintf(stdout, "Request created correctly\n");
+                stRequest->eOperation = eOperation;
 
-                // printRequest(stRequest);
+                /* fill request with passed parameters */
+                vSetParamsForOperation(&stRequest, cFlags, eOperation);
 
-                *request = stRequest;
-
-                retVal = true;
+                /* returning request */
+                *stOutRequest = stRequest;
+                /* provided input is correct */
+                bParseStatus = PARSE_OK;
             }
             else
             {
-                fprintf(stderr, "Error creating request\n");
+                fprintf(stderr, "Malloc failed\n");
             }
-
         }
         else
         {
+            /* print help here */
             fprintf(stderr, "Provided wrong number of params for this operation\n");
         }
     }
+    else
+    {
+        /* print help here */
+        fprintf(stderr, "Wrong number of params\n");
+    }
 
-    return retVal;
+    return bParseStatus;
 }
 
 /* TMP FUNC*/
-void printRequest(stRequest_T *stRequest)
+void printRequest(stRequest_T* stRequest)
 {
     printf("Request operation num: %d\n", stRequest->eOperation);
 
@@ -106,45 +161,44 @@ void printRequest(stRequest_T *stRequest)
     }
 }
 
-
 /**
- * @brief Get the Operation object
+ * @brief Get the requested operation
  * 
- * @param Operation 
- * @return eOperation_T 
+ * @param Operation -> input from parameters
+ * @return eOperation_T -> type of operation
  */
 static eOperation_T eGetOperation(const char cOperation)
 {
-    eOperation_T eOperation = eNONE;
+    eOperation_T eOperation = eINVALID;
 
     switch(cOperation)
     {
-        case 'c':
+        case FLAG_GET_CREDENTIALS:
             eOperation = eGET_CREDENTIALS;
         break;
 
-        case 'l':
+        case FLAG_GET_LOGIN:
             eOperation = eGET_LOGIN;
         break;
 
-        case 'p':
+        case FLAG_GET_PW:
             eOperation = eGET_PW;
         break;
 
-        case 's':
+        case FLAG_GET_CREDENTIALS_COUNT:
             eOperation = eGET_CREDENTIALS_COUNT;
         break;
 
-        case 'n':
+        case FLAG_ADD_CREDENTIALS:
             eOperation = eNEW_CREDENTIALS;
         break;
 
-        case 'a':
+        case FLAG_GET_ALL_CREDENTIALS:
             eOperation = eGET_ALL;
         break;
 
         default:
-            eOperation = eINVALID;
+            /* do nothing */
         break;
     }
 
@@ -154,39 +208,39 @@ static eOperation_T eGetOperation(const char cOperation)
 /**
  * @brief Check if provided requested amount of paramaters for operation
  * 
- * @param eOperation 
- * @param uiFlagsCount 
- * @return true 
- * @return false 
+ * @param eOperation -> requested operation
+ * @param uiFlagsCount -> number of passed parameters
+ * @return true -> number of parameters is correct
+ * @return false -> number of parameters is not correct
  */
-static bool checkIfProvidedReqParamsCount(const eOperation_T eOperation, const size_t uiFlagsCount)
+static bCheckStatus_t bCheckIfProvidedReqParamsCount(const eOperation_T eOperation, const uint8_t u8FlagsCount)
 {
-    bool retVal = false;
+    bCheckStatus_t bCheckStatus = CHECK_FAILED;
 
     switch(eOperation)
     {
         case eGET_CREDENTIALS:
-            retVal = (uiFlagsCount == PARAMS_COUNT_FOR_GET_CREDENTIALS ? true : false);
+            bCheckStatus = (u8FlagsCount == PARAMS_COUNT_FOR_GET_CREDENTIALS ? CHECK_PASSED : CHECK_FAILED);
         break;
 
         case eGET_LOGIN:
-            retVal = (uiFlagsCount == PARAMS_COUNT_FOR_GET_LONG ? true : false);
+            bCheckStatus = (u8FlagsCount == PARAMS_COUNT_FOR_GET_LONG ? CHECK_PASSED : CHECK_FAILED);
         break;
 
         case eGET_PW:
-            retVal = (uiFlagsCount == PARAMS_COUNT_FOR_GET_PW ? true : false);
+            bCheckStatus = (u8FlagsCount == PARAMS_COUNT_FOR_GET_PW ? CHECK_PASSED : CHECK_FAILED);
         break;
 
         case eGET_CREDENTIALS_COUNT:
-            retVal = (uiFlagsCount == PARAMS_COUNT_FOR_CREDENTIALS_NUM ? true : false);
+            bCheckStatus = (u8FlagsCount == PARAMS_COUNT_FOR_CREDENTIALS_NUM ? CHECK_PASSED : CHECK_FAILED);
         break;
 
         case eNEW_CREDENTIALS:
-            retVal = (uiFlagsCount == PARAMS_COUNT_FOR_NEW_CREDENTIALS ? true : false);
+            bCheckStatus = (u8FlagsCount == PARAMS_COUNT_FOR_NEW_CREDENTIALS ? CHECK_PASSED : CHECK_FAILED);
         break;
 
         case eGET_ALL:
-            retVal = (uiFlagsCount == PARAMS_COUNT_FOR_GET_ALL ? true : false);
+            bCheckStatus = (u8FlagsCount == PARAMS_COUNT_FOR_GET_ALL ? CHECK_PASSED : CHECK_FAILED);
         break;
 
         default:
@@ -194,152 +248,164 @@ static bool checkIfProvidedReqParamsCount(const eOperation_T eOperation, const s
         break;
     }
 
-    return retVal;
+    return bCheckStatus;
 }
 
-static bool assignParamsForOperation(stRequest_T **request, char** flags, const eOperation_T eOperation)
+/**
+ * @brief Set the values in request for wanted operation
+ * 
+ * @param request -> struct that holds necessary data for wanted request.
+ *                   At this stage it is ensured that pointer is not NULL,
+ *                   no need to do any additional checks
+ * @param cFlags -> array of input parameters
+ * @param eOperation -> requested operation
+ */
+static void vSetParamsForOperation(stRequest_T** stRequest, char** cFlags, const eOperation_T eOperation)
 {
-    bool noError = false;
-
     switch(eOperation)
     {
         case eGET_CREDENTIALS:
-            noError = setParamsForGetCredentialsReq(request, flags);
+            vSetParamsForGetCredentialsReq(stRequest, cFlags);
         break;
 
         case eGET_LOGIN:
-            noError = setParamsForGetLoginReq(request, flags);
+            vSetParamsForGetLoginReq(stRequest, cFlags);
         break;
 
         case eGET_PW:
-            noError = setParamsForGetPwReq(request, flags);
+            vSetParamsForGetPwReq(stRequest, cFlags);
         break;
 
         case eGET_CREDENTIALS_COUNT:
-            noError = setParamsForGetCredentialsCountReq(request, flags);
+            vSetParamsForGetCredentialsCountReq(stRequest);
         break;
 
         case eNEW_CREDENTIALS:
-            noError = setParamsForAddCredentialsReq(request, flags);
+            vSetParamsForAddCredentialsReq(stRequest, cFlags);
         break;
 
         case eGET_ALL:
-            noError = setParamsForgetAllCredentialsReq(request, flags);
+            vSetParamsForGetAllCredentialsReq(stRequest);
         break;
 
         default:
             /* do nothing */
         break;
     }
-
-    return noError;
-    // if(true != noError)
-    // {
-    //     fprintf(stderr, "Error assigning params to request\n");
-    // }
 }
 
-static bool setParamsForGetCredentialsReq(stRequest_T **request, char** flags)
+/**
+ * @brief Set the values in request for getting credentials for specific site
+ * 
+ * @param request -> struct that holds necessary data for wanted request
+ * @param cFlags -> array of input parameters
+ */
+static void vSetParamsForGetCredentialsReq(stRequest_T** stRequest, char** cFlags)
 {
-    bool retVal = false;
-
-    if(NULL != *request)
-    {
-        (*request)->cSite = getSiteParamVal(flags);
-        (*request)->cLogin = NULL;
-        (*request)->cPw = NULL;
-        retVal = true;
-    }
-
-    return retVal;
+    (*stRequest)->cSite = cGetSiteParamVal(cFlags);
+    (*stRequest)->cLogin = NULL;
+    (*stRequest)->cPw = NULL;
 }
 
-static bool setParamsForGetLoginReq(stRequest_T **request, char** flags)
+/**
+ * @brief Set the values in request for getting login for specific site
+ * 
+ * @param request -> struct that holds necessary data for wanted request
+ * @param cFlags -> array of input parameters
+ */
+static void vSetParamsForGetLoginReq(stRequest_T** stRequest, char** cFlags)
 {
-    bool retVal = false;
-
-    if(NULL != *request)
-    {
-        (*request)->cSite = getSiteParamVal(flags);
-        (*request)->cLogin = NULL;
-        (*request)->cPw = NULL;
-        retVal = true;
-    }
-
-    return retVal;
+    (*stRequest)->cSite = cGetSiteParamVal(cFlags);
+    (*stRequest)->cLogin = NULL;
+    (*stRequest)->cPw = NULL;
 }
 
-static bool setParamsForGetPwReq(stRequest_T **request, char** flags)
+/**
+ * @brief Set the values in request for getting password for specific site
+ * 
+ * @param request -> struct that holds necessary data for wanted request
+ * @param cFlags -> array of input parameters
+ */
+static void vSetParamsForGetPwReq(stRequest_T** stRequest, char** cFlags)
 {
-    bool retVal = false;
-
-    if(NULL != *request)
-    {
-        (*request)->cSite = getSiteParamVal(flags);
-        (*request)->cLogin = NULL;
-        (*request)->cPw = NULL;
-        retVal = true;
-    }
-
-    return retVal;
+    (*stRequest)->cSite = cGetSiteParamVal(cFlags);
+    (*stRequest)->cLogin = NULL;
+    (*stRequest)->cPw = NULL;
 }
 
-static bool setParamsForGetCredentialsCountReq(stRequest_T **request, char** flags)
+/**
+ * @brief Set the values in request for getting the number of saved credentials
+ * 
+ * @param request -> struct that holds necessary data for wanted request
+ * @param cFlags -> array of input parameters
+ */
+static void vSetParamsForGetCredentialsCountReq(stRequest_T** stRequest)
 {
-    bool retVal = false;
-
-    if(NULL != *request)
-    {
-        (*request)->cSite = NULL;
-        (*request)->cLogin = NULL;
-        (*request)->cPw = NULL;
-        retVal = true;
-    }
-
-    return retVal;
+    (*stRequest)->cSite = NULL;
+    (*stRequest)->cLogin = NULL;
+    (*stRequest)->cPw = NULL;
 }
 
-static bool setParamsForgetAllCredentialsReq(stRequest_T **request, char** flags)
+/**
+ * @brief Set the values in request for getting all credentials
+ * 
+ * @param request -> struct that holds necessary data for wanted request
+ * @param cFlags -> array of input parameters
+ */
+static void vSetParamsForGetAllCredentialsReq(stRequest_T** stRequest)
 {
-    bool retVal = false;
-
-    if(NULL != *request)
-    {
-        (*request)->cSite = NULL;
-        (*request)->cLogin = NULL;
-        (*request)->cPw = NULL;
-        retVal = true;
-    }
-
-    return retVal;
+    (*stRequest)->cSite = NULL;
+    (*stRequest)->cLogin = NULL;
+    (*stRequest)->cPw = NULL;
 }
 
-static bool setParamsForAddCredentialsReq(stRequest_T **request, char** flags)
+/**
+ * @brief Set the values in request for adding new credentials operation
+ * 
+ * @param request -> struct that holds necessary data for wanted request
+ * @param cFlags -> array of input parameters
+ */
+static void vSetParamsForAddCredentialsReq(stRequest_T** stRequest, char** cFlags)
 {
-    bool retVal = false;
-
-    if(NULL != *request)
-    {
-        (*request)->cSite = getSiteParamVal(flags);
-        (*request)->cLogin = getLoginParamVal(flags);
-        (*request)->cPw = getPwParamVal(flags);
-        retVal = true;
-    }
-
-    return retVal;
+    (*stRequest)->cSite = cGetSiteParamVal(cFlags);
+    (*stRequest)->cLogin = cGetLoginParamVal(cFlags);
+    (*stRequest)->cPw = cGetPwParamVal(cFlags);
 }
 
-static char* getSiteParamVal(char** flags)
+/**
+ * @brief Get the value of site from provided parameters
+ * 
+ * @param cFlags -> array of input parameters
+ * @return char* -> provided site
+ */
+static char* cGetSiteParamVal(char** cFlags)
 {
-    return flags[SITE_PARAM_INDEX];
+    return cFlags[SITE_PARAM_INDEX];
 }
 
-static char* getLoginParamVal(char** flags)
+/**
+ * @brief Get the value of login from provided parameters
+ * 
+ * @param cFlags -> array of input parameters
+ * @return char* -> provided login
+ */
+static char* cGetLoginParamVal(char** cFlags)
 {
-    return flags[LOGIN_PARAM_INDEX];
+    return cFlags[LOGIN_PARAM_INDEX];
 }
 
-static char* getPwParamVal(char** flags)
+/**
+ * @brief Get the value of password from provided parameters
+ * 
+ * @param cFlags -> array of input parameters
+ * @return char* -> provided password
+ */
+static char* cGetPwParamVal(char** cFlags)
 {
-    return flags[PW_PARAM_INDEX];
+    return cFlags[PW_PARAM_INDEX];
+}
+
+static void vShowHelp()
+{
+    fprintf(stderr, "");
 }
