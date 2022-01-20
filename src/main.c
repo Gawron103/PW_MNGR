@@ -4,12 +4,12 @@
 
 #include "db_handler.h"
 #include "argument_parser.h"
-#include "request_handler.h"
 #include "types.h"
 
 int main(int argc, char **argv) {
     stRequest_T *stRequest = NULL;
     DB_STATUS bDbConnectionStatus = DB_NOT_OK;
+    DB_STATUS bDbRequestExecResult = DB_NOT_OK;
     bool parseResult = false;
 
     parseResult = bParseArgs((uint8_t)argc, argv, &stRequest);
@@ -23,7 +23,14 @@ int main(int argc, char **argv) {
 
         if(DB_OK == bDbConnectionStatus) {
             fprintf(stdout, "Connected to DB\n");
-            perform_request(stRequest);
+            // perform_request(stRequest);
+            bDbRequestExecResult = db_execute_request(stRequest);
+
+            if(DB_NOT_OK == bDbRequestExecResult)
+            {
+                fprintf(stderr, "DB operation NOT successful\n");
+            }
+
             bDbConnectionStatus = db_handler_deinit();
 
             if(DB_OK == bDbConnectionStatus) {

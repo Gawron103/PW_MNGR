@@ -4,6 +4,8 @@
 #include <stdbool.h>
 #include <stdio.h>
 
+#include "types.h"
+
 /* typedefs */
 typedef bool DB_STATUS;
 
@@ -13,10 +15,6 @@ typedef bool DB_STATUS;
 
 bool db_handler_init();
 bool db_handler_deinit();
-bool insert_credentials(char* site, char* login, char* pw);
-char* get_password();
-char* get_username();
-size_t get_num_of_entries();
-void get_credentials_for(char* site, char* login, char* pw);
+DB_STATUS db_execute_request(const stRequest_T* stRequest);
 
 #endif /* DB_HANDLER_H */
